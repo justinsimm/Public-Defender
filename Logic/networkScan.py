@@ -16,9 +16,29 @@ def wifi_available():
     if (output == "There is no wireless interface on the system."):
         return False
 
-    # Extract any field with a regex like this:
+    print(output)
+
+    #Obtain fields from the output
     auth = re.search(r'Authentication\s+:\s+(.+)', output)
     if auth:
-        print(auth.group(1).strip())
+        auth = auth.group(1).strip()
+
+    ssid = re.search(r'SSID\s+:\s+(.+)', output)
+    if ssid:
+        ssid = ssid.group(1).strip()
+
+    cipher = re.search(r'Cipher\s+:\s+(.+)', output)
+    if cipher:
+        cipher = cipher.group(1).strip()
+
+    vpn = re.search(r'VPN\s+:\s+(.+)', output)
+    if vpn:
+        vpn = vpn.group(1).strip()
+
+    wps = re.search(r'WPS\s+:\s+(.+)', output)
+    if wps:
+        wps = wps.group(1).strip()
+    
+    
 
 wifi_available()
