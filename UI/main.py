@@ -54,11 +54,11 @@ class getStartPage(controller.show_frame(StartPage)):
 class StartPage(tk.Frame):
     def __init__(self, parent, controller): 
         tk.Frame.__init__(self, parent)
- 
+
         button1 = ttk.Button(self, text ="Risk Analysis",
             command = lambda : controller.show_frame(Page1))
         button1.grid(row = 0, column = 0, padx = 0, pady = 0)
- 
+
         ## button to show frame 2 with text layout2
         button2 = ttk.Button(self, text ="Page 2",
         command = lambda : controller.show_frame(Page2))
@@ -66,7 +66,7 @@ class StartPage(tk.Frame):
         # putting the button in its place by
         # using grid
         button2.grid(row = 0, column = 1, padx = 0, pady = 0)
- 
+
          
  
  
