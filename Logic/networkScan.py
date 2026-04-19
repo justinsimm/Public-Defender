@@ -1,5 +1,7 @@
 import subprocess, platform, re
-    
+import urllib.request
+import json
+import socket 
 
 def wifi_available():
     # Check for matching os
@@ -16,8 +18,6 @@ def wifi_available():
     #Return if no wireles network is found
     if result.returncode != 0 or not output.strip():
         return False
-
-    print(output)
 
     #Get Authentication method
     auth = re.search(r'Authentication\s+:\s+(.+)', output)
@@ -61,8 +61,29 @@ def wifi_available():
                 subnet = subnet.group(1).strip()
     
 
-    return auth, ssid, cipher, wifiIP, DoH
+    return auth, ssid, cipher, wifiIP, DoH, subnet
 
-    
+#Make a domain request throuh encrypted query (Cloudflare)
+#Compare data to check for DNS spoofing 
+def doh_integrity_check(domain='example.com'):
+    # Query via DoH 
+    url = f'https://cloudflare-dns.com/dns-query?name={domain}&type=A'
+    req = urllib.request.Request(url, headers={'Accept': 'application/dns-json'})
+
+    #Make the query and load the response into a json for comparison
+    with urllib.request.urlopen(req) as resp:
+        data = json.loads(resp.read())
+
+    #Extract the IPS data from the json received
+    doh_ips = {a['data'] for a in data.get('Answer', []) if a['type'] == 1}
+
+    #Make a normal query using unencrypted system
+    system_ips = socket.getaddrinfo(domain, None)
+    system_ips = {system_ips[0][4][0]}
+
+    if system_ips.issubset(doh_ips):
+        return True
+    else:
+        return False
 
 wifi_available()

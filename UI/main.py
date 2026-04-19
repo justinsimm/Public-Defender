@@ -1,111 +1,106 @@
-import tkinter as tk
+import sys
+import os
 import customtkinter
-from tkinter import ttk
- 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Logic'))
+from networkScan import wifi_available
+from networkScan import doh_integrity_check
 
-LARGEFONT =("Verdana", 35)
+customtkinter.set_appearance_mode("dark")
+customtkinter.set_default_color_theme("blue")
 
-class tkinterApp(customtkinter.Ctk):
-    
-    def __init__(self, *args, **kwargs): 
-        super().__init__(self)
-        #Configure window
-        self.configure()
-        self.minsize(200, 200)
-        self.maxsize(500, 500)
-        self.geometry("300x300+200+200")
 
-        #Tab View
-        self.tab_view = customtkinter.CTkTabview(master=self)
+class App(customtkinter.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Public Defender")
+        self.geometry("480x520")
+        self.resizable(False, False)
+
+        self.tab_view = customtkinter.CTkTabview(self)
         self.tab_view.pack(fill="both", expand=True, padx=10, pady=10)
 
+        self.tab_view.add("Network Info")
         self.tab_view.add("Risk Analysis")
-        self.tab_view.add("Recommendations") 
- 
-        # iterating through a tuple consisting
-        # of the different page layouts
-        for F in (StartPage, Page1, Page2):
- 
-            frame = F(container, self)
- 
-            # initializing frame of that object from
-            # startpage, page1, page2 respectively with 
-            # for loop
-            self.frames[F] = frame 
- 
-            frame.grid(row = 0, column = 0, sticky ="nsew")
+        self.tab_view.add("Recommendations")
 
-        self.tab_view = MyTabView(master=self)
-        self.tab_view.grid(row=0, column=0, padx=20, pady=20)
-        
+        self._build_network_tab()
+        self._build_risk_tab()
+        self._build_recommendations_tab()
 
-        self.show_frame(StartPage)
- 
-    # to display the current frame passed as
-    # parameter
-    def show_frame(self, cont):
-        frame = self.frames[cont]
-        frame.tkraise()
+    def _build_network_tab(self):
+        tab = self.tab_view.tab("Network Info")
 
-class getStartPage(controller.show_frame(StartPage)):
+        self.scan_btn = customtkinter.CTkButton(tab, text="Scan Network", command=self._run_scan)
+        self.scan_btn.pack(pady=(15, 10))
 
+        self.status_label = customtkinter.CTkLabel(tab, text="", text_color="gray")
+        self.status_label.pack()
 
-# Risk Analysis Page
-class StartPage(tk.Frame):
-    def __init__(self, parent, controller): 
-        tk.Frame.__init__(self, parent)
+        info_frame = customtkinter.CTkFrame(tab)
+        info_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        button1 = ttk.Button(self, text ="Risk Analysis",
-            command = lambda : controller.show_frame(Page1))
-        button1.grid(row = 0, column = 0, padx = 0, pady = 0)
+        self.fields = {}
+        rows = [
+            ("SSID",           "ssid"),
+            ("Authentication", "auth"),
+            ("Cipher",         "cipher"),
+            ("IPv4 Address",   "ip"),
+            ("Subnet Mask",    "subnet"),
+            ("DoH",            "doh"),
+            ('DoH Integrity Check', 'doh_check'),
+        ]
 
-        ## button to show frame 2 with text layout2
-        button2 = ttk.Button(self, text ="Page 2",
-        command = lambda : controller.show_frame(Page2))
-    
-        # putting the button in its place by
-        # using grid
-        button2.grid(row = 0, column = 1, padx = 0, pady = 0)
+        for i, (label, key) in enumerate(rows):
+            customtkinter.CTkLabel(info_frame, text=f"{label}:", anchor="w", width=140).grid(
+                row=i, column=0, padx=(12, 4), pady=6, sticky="w"
+            )
+            val = customtkinter.CTkLabel(info_frame, text="—", anchor="w")
+            val.grid(row=i, column=1, padx=(4, 12), pady=6, sticky="w")
+            self.fields[key] = val
 
-         
- 
- 
-#Recommendations Page
-class Page1(tk.Frame):
-    
-    def __init__(self, parent, controller):
-        
-        tk.Frame.__init__(self, parent)
- 
-        #Navbar
-        button1 = ttk.Button(self, text ="StartPage",
-                            command = lambda : controller.show_frame(StartPage))
-        button1.grid(row = 0, column = 0, padx = 0, pady = 0)
- 
-        button2 = ttk.Button(self, text ="Page 2",
-                            command = lambda : controller.show_frame(Page2))
-        button2.grid(row = 0, column = 1, padx = 0, pady = 0)
- 
- 
- 
- 
-# third window frame page2
-class Page2(tk.Frame): 
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-        
-        #Navbar
-        button1 = ttk.Button(self, text ="Page 1",
-                            command = lambda : controller.show_frame(Page1))
-        button1.grid(row = 0, column = 1, padx = 0, pady = 0)
- 
-    
-        button2 = ttk.Button(self, text ="Startpage",
-                            command = lambda : controller.show_frame(StartPage))
-        button2.grid(row = 0, column = 0, padx = 0, pady = 0)
- 
- 
-# Driver Code
-app = tkinterApp()
+    def _build_risk_tab(self):
+        tab = self.tab_view.tab("Risk Analysis")
+        customtkinter.CTkLabel(tab, text="Risk analysis coming soon.", text_color="gray").pack(pady=20)
+
+    def _build_recommendations_tab(self):
+        tab = self.tab_view.tab("Recommendations")
+        customtkinter.CTkLabel(tab, text="Recommendations coming soon.", text_color="gray").pack(pady=20)
+
+    def _run_scan(self):
+        self.scan_btn.configure(state="disabled", text="Scanning...")
+        self.status_label.configure(text="")
+        self.update()
+
+        #Call backend scan and append the results to the fileds of the tab
+        result = wifi_available()
+
+        if result is False:
+            self.status_label.configure(text="No Wi-Fi connection detected.", text_color="red")
+            self.scan_btn.configure(state="normal", text="Scan Network")
+            return
+
+        auth, ssid, cipher, ip, doh, subnet = result
+
+        self.fields["ssid"].configure(text=ssid or "Unknown")
+        self.fields["auth"].configure(text=auth or "Unknown")
+        self.fields["cipher"].configure(text=cipher or "Unknown")
+        self.fields["ip"].configure(text=ip or "Unknown")
+        self.fields["subnet"].configure(text=subnet or "Unknown")
+        self.fields["doh"].configure(text=doh if doh else "Not detected")
+
+        self.status_label.configure(text="Scan complete.", text_color="green")
+        self.scan_btn.configure(state="normal", text="Scan Network")
+
+        #Call the backend DoH query and append the results
+        doh_result = doh_integrity_check()
+
+        self.fields["doh_check"].configure(text="Successful" if doh_result else "Failure")
+
+        #Store results for other tabs
+        self.scan_results = {
+            'auth': auth, 'ssid': ssid, 'cipher': cipher,
+            'ip': ip, 'doh': doh, 'subnet': subnet, 'doh_check': doh_result,
+        }
+
+app = App()
 app.mainloop()
-
