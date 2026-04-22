@@ -62,7 +62,6 @@ def wifi_available():
             if subnet:
                 subnet = subnet.group(1).strip()
     
-
     return auth, ssid, cipher, wifiIP, DoH, subnet
 
 #Make a domain request throuh encrypted query (Cloudflare - TLS)
@@ -87,5 +86,3 @@ def doh_integrity_check(domain='example.com'):
         return True
     else:
         return False
-
-wifi_available()

@@ -82,8 +82,8 @@ class App(customtkinter.CTk):
             'WPA-Enterprise': ('WPA (WPA1) Enterprise relies on TKIP which is deprecated and vulnerable to packet forgery attacks.', 'orange'),
             'WPA2-Personal':  ('WPA2-Personal is vulnerable to KRACK (key reuse) and offline dictionary attacks against the PSK due to the 4-way handshake vulnerability.', 'yellow'),
             'WPA2-Enterprise':('WPA2-Enterprise uses 802.1X/RADIUS which is stronger, but still vulnerable to KRACK (key reuse) and the 4-way handshake vulnerability.', 'yellow'),
-            'WPA3-Personal':  ('WPA3-Personal uses SAE which resists offline dictionary attacks but is still suseptible due to using the 4-way hanshake. Low risk.', 'green'),
-            'WPA3-Enterprise':('WPA3-Enterprise with 192-bit mode amd madnatory PMF is the strongest available standard.', 'green'),
+            'WPA3-Personal':  ('WPA3-Personal uses SAE (replaces PSK) which resists offline dictionary attacks but is still suseptible to the 4-way hanshake capture. Low risk.', 'green'),
+            'WPA3-Enterprise':('WPA3-Enterprise with 192-bit mode amd mandatory PMF is the strongest available standard.', 'green'),
         }
 
         text, color = auth_risks.get(auth, (f'Unrecognized auth method: {auth}', 'gray'))
@@ -114,7 +114,7 @@ class App(customtkinter.CTk):
         auth_risks = ['Open','WPA-Personal','WPA-Enterprise','WPA2-Personal','WPA2-Enterprise']
 
         if self.scan_results['auth'] in auth_risks:
-            customtkinter.CTkLabel(tab, text="Update to a higher Authorization Method", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+            customtkinter.CTkLabel(tab, text="Update to a higher Authorization Method: WPA2-Personal is still widely used, but if possible update your router to WPA3", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
 
         if self.scan_results['cipher'] and 'TKIP' in self.scan_results['cipher'].upper():
             customtkinter.CTkLabel(tab, text="Update to at least WPA2-Personal to use a better cipher", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
