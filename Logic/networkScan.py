@@ -48,6 +48,8 @@ def wifi_available():
     if DoH:
         DoH = DoH.group(1).strip()
 
+    wifiIP = None
+    subnet = None
     blocks = re.split(r'\r?\n\r?\n', output)
 
     for block in blocks:
@@ -63,7 +65,7 @@ def wifi_available():
 
     return auth, ssid, cipher, wifiIP, DoH, subnet
 
-#Make a domain request throuh encrypted query (Cloudflare)
+#Make a domain request throuh encrypted query (Cloudflare - TLS)
 #Compare data to check for DNS spoofing 
 def doh_integrity_check(domain='example.com'):
     # Query via DoH 

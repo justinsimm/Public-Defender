@@ -4,6 +4,7 @@ import customtkinter
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Logic'))
 from networkScan import wifi_available
 from networkScan import doh_integrity_check
+from riskAnlysis import riskAnalysis
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("blue")
@@ -22,6 +23,8 @@ class App(customtkinter.CTk):
         self.tab_view.add("Network Info")
         self.tab_view.add("Risk Analysis")
         self.tab_view.add("Recommendations")
+
+        self.scan_results = None
 
         self._build_network_tab()
         self._build_risk_tab()
@@ -60,11 +63,67 @@ class App(customtkinter.CTk):
 
     def _build_risk_tab(self):
         tab = self.tab_view.tab("Risk Analysis")
-        customtkinter.CTkLabel(tab, text="Risk analysis coming soon.", text_color="gray").pack(pady=20)
+        customtkinter.CTkLabel(tab, text="Run a scan to see risk analysis.", text_color="gray").pack(pady=20)
+
+    def _populate_risk_tab(self):
+        if self.scan_results is None:
+            return
+
+        tab = self.tab_view.tab("Risk Analysis")
+
+        for widget in tab.winfo_children():
+            widget.destroy()
+
+        auth = self.scan_results['auth'] or ''
+
+        auth_risks = {
+            'Open':           ('No authentication — traffic is fully exposed to eavesdropping.', 'red'),
+            'WPA-Personal':   ('WPA (WPA1) uses TKIP which is deprecated and vulnerable to packet forgery attacks.', 'orange'),
+            'WPA-Enterprise': ('WPA (WPA1) Enterprise relies on TKIP which is deprecated and vulnerable to packet forgery attacks.', 'orange'),
+            'WPA2-Personal':  ('WPA2-Personal is vulnerable to KRACK (key reuse) and offline dictionary attacks against the PSK due to the 4-way handshake vulnerability.', 'yellow'),
+            'WPA2-Enterprise':('WPA2-Enterprise uses 802.1X/RADIUS which is stronger, but still vulnerable to KRACK (key reuse) and the 4-way handshake vulnerability.', 'yellow'),
+            'WPA3-Personal':  ('WPA3-Personal uses SAE which resists offline dictionary attacks but is still suseptible due to using the 4-way hanshake. Low risk.', 'green'),
+            'WPA3-Enterprise':('WPA3-Enterprise with 192-bit mode amd madnatory PMF is the strongest available standard.', 'green'),
+        }
+
+        text, color = auth_risks.get(auth, (f'Unrecognized auth method: {auth}', 'gray'))
+        customtkinter.CTkLabel(tab, text=f"Auth: {text}", text_color=color, wraplength=400, justify="left").pack(padx=12, pady=(15, 5), anchor="w")
+
+        if self.scan_results['cipher'] and 'TKIP' in self.scan_results['cipher'].upper():
+            customtkinter.CTkLabel(tab, text="Cipher: TKIP is deprecated and vulnerable to KRACK-style attacks. CCMP/AES should be used.", text_color="orange", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+
+        if not self.scan_results['doh']:
+            customtkinter.CTkLabel(tab, text="DNS: No DoH detected — DNS queries are unencrypted and visible to network observers including your ISP.", text_color="orange", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+
+        if self.scan_results['doh_check'] is False:
+            customtkinter.CTkLabel(tab, text="DNS Integrity: System DNS response did not match encrypted DoH response — possible DNS spoofing.", text_color="red", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
 
     def _build_recommendations_tab(self):
         tab = self.tab_view.tab("Recommendations")
-        customtkinter.CTkLabel(tab, text="Recommendations coming soon.", text_color="gray").pack(pady=20)
+        customtkinter.CTkLabel(tab, text="Run a scan to see recommendations.", text_color="gray").pack(pady=20)
+
+    def _populate_recommendations_tab(self):
+        if self.scan_results is None:
+            return
+
+        tab = self.tab_view.tab("Recommendations")
+
+        for widget in tab.winfo_children():
+            widget.destroy()
+
+        auth_risks = ['Open','WPA-Personal','WPA-Enterprise','WPA2-Personal','WPA2-Enterprise']
+
+        if self.scan_results['auth'] in auth_risks:
+            customtkinter.CTkLabel(tab, text="Update to a higher Authorization Method", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+
+        if self.scan_results['cipher'] and 'TKIP' in self.scan_results['cipher'].upper():
+            customtkinter.CTkLabel(tab, text="Update to at least WPA2-Personal to use a better cipher", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+
+        if not self.scan_results['doh']:
+            customtkinter.CTkLabel(tab, text="Use a custom dns to encrypt queries. Cloudflare and Google both offer free dns routing (1.1.1.1 and 8.8.8.8)", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
+
+        if self.scan_results['doh_check'] is False:
+            customtkinter.CTkLabel(tab, text="Flush your DNS (ipconfig /flushdns in windows) and use a custom dns resolver like Cloudflare or Windows", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
 
     def _run_scan(self):
         self.scan_btn.configure(state="disabled", text="Scanning...")
@@ -101,6 +160,12 @@ class App(customtkinter.CTk):
             'auth': auth, 'ssid': ssid, 'cipher': cipher,
             'ip': ip, 'doh': doh, 'subnet': subnet, 'doh_check': doh_result,
         }
+
+        #Update the risk analysis and recommendations tabs
+        self._populate_risk_tab()
+        self._populate_recommendations_tab()
+            
+        
 
 app = App()
 app.mainloop()
