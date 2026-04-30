@@ -1,10 +1,15 @@
 import sys
 import os
+import ctypes
 import customtkinter
+from cryptography.fernet import Fernet
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Logic'))
 from networkScan import wifi_available
 from networkScan import doh_integrity_check
 from riskAnlysis import riskAnalysis
+
+def _is_admin():
+    return ctypes.windll.shell32.IsUserAnAdmin()
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("blue")
@@ -126,6 +131,10 @@ class App(customtkinter.CTk):
             customtkinter.CTkLabel(tab, text="Flush your DNS (ipconfig /flushdns in windows) and use a custom dns resolver like Cloudflare or Windows", wraplength=400, justify="left").pack(padx=12, pady=5, anchor="w")
 
     def _run_scan(self):
+        if not _is_admin():
+            self.status_label.configure(text="Administrator privileges required.", text_color="red")
+            return
+
         self.scan_btn.configure(state="disabled", text="Scanning...")
         self.status_label.configure(text="")
         self.update()
@@ -160,6 +169,25 @@ class App(customtkinter.CTk):
             'auth': auth, 'ssid': ssid, 'cipher': cipher,
             'ip': ip, 'doh': doh, 'subnet': subnet, 'doh_check': doh_result,
         }
+
+        #Store in encrypted file
+        # Load the key from the .key file
+        with open('filekey.key', 'rb') as f:
+            key = f.read()
+
+        # Create a Fernet object using the key
+        fernet = Fernet(key)
+
+        # Open the file to be encrypted in binary read mode
+        with open('temp.txt', 'rb') as f:
+            original = f.read()
+
+        # Encrypt the file content
+        encrypted = fernet.encrypt(original)
+
+        # Overwrite the original file with the encrypted data
+        with open('temp.txt', 'wb') as f:
+            f.write(self.scan_results)
 
         #Update the risk analysis and recommendations tabs
         self._populate_risk_tab()
