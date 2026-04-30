@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import ctypes
 import customtkinter
 from cryptography.fernet import Fernet
@@ -7,6 +8,29 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Logic'))
 from networkScan import wifi_available
 from networkScan import doh_integrity_check
 from riskAnlysis import riskAnalysis
+
+Key_file = '../Demo/scan.key'
+Scan_log = '../Demo/scan_log.enc'
+
+def load_key():
+    if os.path.exists(Key_file):
+        return open(Key_file, 'rb').read()
+    key = Fernet.generate_key()
+    open(Key_file, 'wb').write(key)
+    return key
+
+def save_scan(scan_results: dict):
+    key = load_key()
+    f = Fernet(key)
+    data = json.dumps(scan_results).encode()
+    encrypted = f.encrypt(data)
+    open(Scan_log, 'wb').write(encrypted)
+
+def load_scan():
+    key = load_key()
+    f = Fernet(key)
+    encrypted = open(Scan_log, 'rb').read()
+    return json.loads(f.decrypt(encrypted).decode())
 
 def _is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin()
@@ -171,23 +195,7 @@ class App(customtkinter.CTk):
         }
 
         #Store in encrypted file
-        # Load the key from the .key file
-        with open('filekey.key', 'rb') as f:
-            key = f.read()
-
-        # Create a Fernet object using the key
-        fernet = Fernet(key)
-
-        # Open the file to be encrypted in binary read mode
-        with open('temp.txt', 'rb') as f:
-            original = f.read()
-
-        # Encrypt the file content
-        encrypted = fernet.encrypt(original)
-
-        # Overwrite the original file with the encrypted data
-        with open('temp.txt', 'wb') as f:
-            f.write(self.scan_results)
+        save_scan(self.scan_results)
 
         #Update the risk analysis and recommendations tabs
         self._populate_risk_tab()
